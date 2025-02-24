@@ -9,7 +9,13 @@ coilCompose = "2.7.0"
 constraintlayout = "2.2.0"
 converterGson = "2.11.0"
 datetimeVersion = "0.9.0"
+firebaseAnalyticsKtx = "22.2.0"
+firebaseAuth = "23.2.0"
+firebaseAuthKtx = "23.2.0"
+firebaseFirestore = "25.1.2"
+firebaseFirestoreKtx = "25.1.2"
 firebaseMessaging = "24.1.0"
+firebaseMessagingKtx = "24.1.0"
 gradle = "8.8.1"
 gson = "2.12.1"
 kotlin = "2.1.10"
@@ -39,6 +45,7 @@ activityCompose = "1.10.0"
 composeBom = "2025.02.00"
 navigationCompose = "2.8.7"
 ui = "1.7.8"
+activity = "1.10.0"
 
 [libraries]
 androidx-appcompat = { module = "androidx.appcompat:appcompat", version.ref = "appcompat" }
@@ -55,7 +62,13 @@ camera-view = { module = "androidx.camera:camera-view", version.ref = "cameraVie
 coil-compose = { module = "io.coil-kt:coil-compose", version.ref = "coilCompose" }
 compose-material-dialogs-datetime = { module = "io.github.vanpra.compose-material-dialogs:datetime", version.ref = "datetimeVersion" }
 converter-gson = { module = "com.squareup.retrofit2:converter-gson", version.ref = "converterGson" }
+firebase-analytics-ktx = { module = "com.google.firebase:firebase-analytics-ktx", version.ref = "firebaseAnalyticsKtx" }
+firebase-auth = { module = "com.google.firebase:firebase-auth", version.ref = "firebaseAuth" }
+firebase-firestore = { module = "com.google.firebase:firebase-firestore", version.ref = "firebaseFirestore" }
 firebase-messaging = { module = "com.google.firebase:firebase-messaging", version.ref = "firebaseMessaging" }
+google-firebase-auth-ktx = { module = "com.google.firebase:firebase-auth-ktx", version.ref = "firebaseAuthKtx" }
+google-firebase-firestore-ktx = { module = "com.google.firebase:firebase-firestore-ktx", version.ref = "firebaseFirestoreKtx" }
+google-firebase-messaging-ktx = { module = "com.google.firebase:firebase-messaging-ktx", version.ref = "firebaseMessagingKtx" }
 gradle = { module = "com.android.tools.build:gradle", version.ref = "gradle" }
 gson = { module = "com.google.code.gson:gson", version.ref = "gson" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
@@ -88,6 +101,7 @@ sheets-core = { group = "com.maxkeppeler.sheets-compose-dialogs", name = "core",
 sheets-calendar = { group = "com.maxkeppeler.sheets-compose-dialogs", name = "calendar", version.ref = "sheets-compose" }
 sheets-clock = { group = "com.maxkeppeler.sheets-compose-dialogs", name = "clock", version.ref = "sheets-compose" }
 ui = { module = "androidx.compose.ui:ui", version.ref = "ui" }
+androidx-activity = { group = "androidx.activity", name = "activity", version.ref = "activity" }
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }

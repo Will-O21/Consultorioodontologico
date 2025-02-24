@@ -2,35 +2,78 @@ package com.wdog.consultorioodontologico.ui.inicio
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PantallaInicio(navController: NavController) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Text("Bienvenido al Consultorio Odontológico")
-        Button(
-            onClick = { navController.navigate("registro") },
-            modifier = Modifier.padding(8.dp)
-        ) {
-            Text("Ir a Registro")
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Consultorio Odontológico") },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    titleContentColor = MaterialTheme.colorScheme.onPrimary
+                )
+            )
+        },
+        content = { padding ->
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = "Bienvenido al Consultorio Odontológico",
+                    modifier = Modifier.padding(16.dp)
+                )
+                Button(
+                    onClick = { navController.navigate("Registro") },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp)
+                ) {
+                    Text("Ir a Registro")
+                }
+                Button(
+                    onClick = { navController.navigate("Pacientes") },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp)
+                ) {
+                    Text("Ver Pacientes")
+                }
+                Button(
+                    onClick = { navController.navigate("Citas") },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp)
+                ) {
+                    Text("Gestionar Citas")
+                }
+                Button(
+                    onClick = { navController.navigate("Pagos") },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp)
+                ) {
+                    Text("Gestión de Pagos")
+                }
+            }
         }
-        Button(
-            onClick = { navController.navigate("pacientes") },
-            modifier = Modifier.padding(8.dp)
-        ) {
-            Text("Ver Pacientes")
-        }
-    }
+    )
 }

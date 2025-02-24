@@ -31,6 +31,7 @@ dependencies {
     implementation(libs.androidx.material3)
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.runtime)
+    implementation(libs.androidx.activity)
     debugImplementation(libs.androidx.ui.tooling) // Preview en modo debug
 
     // Componentes adicionales de Compose
@@ -71,8 +72,17 @@ dependencies {
     // Firebase (Notificaciones push)
     // ---------------------------------------------------------------
     implementation(libs.firebase.messaging)
-    implementation("com.google.firebase:firebase-firestore:25.1.2")
-    implementation("com.google.firebase:firebase-auth:23.2.0")
+    implementation(libs.firebase.firestore)
+    implementation(libs.firebase.auth)
+    implementation (libs.google.firebase.auth.ktx)
+    implementation (libs.google.firebase.firestore.ktx)
+    implementation (libs.firebase.analytics.ktx)
+    implementation (libs.google.firebase.messaging.ktx)
+    implementation (libs.androidx.core.ktx)
+    implementation (libs.androidx.appcompat)
+    implementation (libs.material)
+    implementation (libs.androidx.constraintlayout)
+
 
     // Testing avanzado
     testImplementation("io.mockk:mockk:1.13.5")
