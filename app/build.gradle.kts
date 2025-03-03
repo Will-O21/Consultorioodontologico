@@ -32,6 +32,7 @@ dependencies {
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.runtime)
     implementation(libs.androidx.activity)
+    testImplementation(libs.androidx.runner)
     debugImplementation(libs.androidx.ui.tooling) // Preview en modo debug
 
     // Componentes adicionales de Compose
@@ -83,9 +84,18 @@ dependencies {
     implementation (libs.material)
     implementation (libs.androidx.constraintlayout)
 
+        implementation (libs.androidx.work.runtime.ktx) // WorkManager
 
     // Testing avanzado
-    testImplementation("io.mockk:mockk:1.13.5")
+    testImplementation(libs.mockk)
+    testImplementation(libs.junit)
+    testImplementation(libs.mockito.core)
+    testImplementation(libs.kotlinx.coroutines.test)
+
+        // Dependencias para pruebas de UI
+    androidTestImplementation("androidx.compose.ui:ui-test-junit4:1.7.8")
+    androidTestImplementation(libs.androidx.junit)
+    androidTestImplementation(libs.androidx.espresso.core)
     testImplementation("app.cash.turbine:turbine:0.12.1")
     // ---------------------------------------------------------------
     // Testing
@@ -101,6 +111,8 @@ dependencies {
     debugImplementation(libs.androidx.ui.test.manifest)
     implementation(libs.ui)
     implementation(libs.kotlinx.metadata.jvm)
+    //Iconos
+    implementation (libs.androidx.material.icons.extended)
 }
 
 android {

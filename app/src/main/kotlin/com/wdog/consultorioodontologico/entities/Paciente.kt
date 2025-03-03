@@ -12,5 +12,8 @@ data class Paciente(
     val fotos: List<String>,
     val observaciones: String,
     val historiaClinica: String,
-    val estadoPago: String = "Pendiente" // Nuevo campo
+    val estadoPago: String = "Pendiente", // Nuevo campo
+    val monto: Double = 0.0, // Nuevo campo
+    val abono: Double = 0.0  // Nuevo campo
+
 )

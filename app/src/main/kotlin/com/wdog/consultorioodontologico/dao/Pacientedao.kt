@@ -3,6 +3,8 @@ package com.wdog.consultorioodontologico.dao
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.Query
+import androidx.room.Update
+import androidx.room.Delete
 import com.wdog.consultorioodontologico.entities.Paciente
 import kotlinx.coroutines.flow.Flow
 
@@ -14,4 +16,10 @@ interface PacienteDao {
 
     @Query("SELECT * FROM pacientes")
     fun getAllPacientes(): Flow<List<Paciente>> // Usar Flow
+
+    @Update
+    suspend fun updatePaciente(paciente: Paciente) // Método para actualizar un paciente
+
+    @Delete
+    suspend fun deletePaciente(paciente: Paciente) // Método para eliminar un paciente
 }

@@ -19,4 +19,15 @@ class PacienteViewModel(application: Application) : AndroidViewModel(application
             pacienteDao.insert(paciente)
         }
     }
+    fun actualizarPaciente(paciente: Paciente) {
+        viewModelScope.launch {
+            pacienteDao.updatePaciente(paciente)
+        }
+    }
+
+    fun eliminarPaciente(paciente: Paciente) {
+        viewModelScope.launch {
+            pacienteDao.deletePaciente(paciente)
+        }
+    }
 }

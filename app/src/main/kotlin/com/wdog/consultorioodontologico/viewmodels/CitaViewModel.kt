@@ -11,15 +11,25 @@ import kotlinx.coroutines.launch
 class CitaViewModel(application: Application) : AndroidViewModel(application) {
     private val citaDao = AppDatabase.getDatabase(application).citaDao()
 
-    // Insertar una cita
     fun insertarCita(cita: Cita) {
         viewModelScope.launch {
             citaDao.insert(cita)
         }
     }
 
-    // Obtener todas las citas
     fun obtenerCitas(): Flow<List<Cita>> {
-        return citaDao.getAllCitas() // Cambiar a getAllCitas()
+        return citaDao.getAllCitas()
+    }
+
+    fun actualizarCita(cita: Cita) {
+        viewModelScope.launch {
+            citaDao.updateCita(cita)
+        }
+    }
+
+    fun eliminarCita(cita: Cita) {
+        viewModelScope.launch {
+            citaDao.deleteCita(cita)
+        }
     }
 }

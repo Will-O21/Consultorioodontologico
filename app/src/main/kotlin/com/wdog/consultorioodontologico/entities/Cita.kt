@@ -13,14 +13,15 @@ import java.time.LocalDateTime
             entity = Paciente::class,
             parentColumns = ["id"],
             childColumns = ["pacienteId"],
-            onDelete = ForeignKey.CASCADE // Opcional: Define el comportamiento al eliminar un paciente
+            onDelete = ForeignKey.CASCADE
         )
     ],
-    indices = [Index(value = ["pacienteId"])] // Agregar un índice a pacienteId
+    indices = [Index(value = ["pacienteId"])]
 )
 data class Cita(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
-    val pacienteId: Long, // Clave foránea que referencia a la tabla de pacientes
+    val pacienteId: Long,
+    val pacienteNombre: String, // Nuevo campo para almacenar el nombre del paciente
     val fechaHora: LocalDateTime,
     val observaciones: String
 )

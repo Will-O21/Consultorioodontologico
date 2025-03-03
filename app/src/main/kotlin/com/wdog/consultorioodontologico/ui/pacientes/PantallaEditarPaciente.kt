@@ -1,6 +1,5 @@
-package com.wdog.consultorioodontologico.ui.registro
+package com.wdog.consultorioodontologico.ui.pacientes
 
-import android.app.Application
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -13,13 +12,14 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -28,65 +28,65 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
 import com.wdog.consultorioodontolgico.R
 import com.wdog.consultorioodontologico.entities.Paciente
 import com.wdog.consultorioodontologico.viewmodels.PacienteViewModel
-import com.wdog.consultorioodontologico.viewmodels.PacienteViewModelFactory
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PantallaRegistro(navController: NavController) {
-    var nombre by remember { mutableStateOf(TextFieldValue("")) }
-    var apellido by remember { mutableStateOf(TextFieldValue("")) }
-    var edad by remember { mutableStateOf(TextFieldValue("")) }
-    var observaciones by remember { mutableStateOf(TextFieldValue("")) }
-    var monto by remember { mutableStateOf(TextFieldValue("")) }
-    var estadoPago by remember { mutableStateOf("Seleccionar") }
-    var abono by remember { mutableStateOf(TextFieldValue("")) }
+fun PantallaEditarPaciente(
+    navController: NavController,
+    paciente: Paciente,
+    viewModel: PacienteViewModel
+) {
+    var nombre by remember { mutableStateOf(paciente.nombre) }
+    var apellido by remember { mutableStateOf(paciente.apellido) }
+    var edad by remember { mutableStateOf(paciente.edad.toString()) }
+    var observaciones by remember { mutableStateOf(paciente.observaciones) }
+    var fotos by remember { mutableStateOf(paciente.fotos.map { Uri.parse(it) }) }
+    var estadoPago by remember { mutableStateOf(paciente.estadoPago) }
+    var monto by remember { mutableStateOf(paciente.monto.toInt().toString()) }
+    var abono by remember { mutableStateOf(paciente.abono.toInt().toString()) }
 
-    // Estados para errores de validación
-    var errorNombre by remember { mutableStateOf(false) }
-    var errorApellido by remember { mutableStateOf(false) }
-    var errorEdad by remember { mutableStateOf(false) }
-    var errorObservaciones by remember { mutableStateOf(false) }
+    // Estado para errores de validación
     var errorMonto by remember { mutableStateOf(false) }
     var errorAbono by remember { mutableStateOf(false) }
 
-    // Estado para fotos
-    val fotos = remember { mutableStateListOf<Uri>() }
-    val launcher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent(),
-        onResult = { uri ->
-            uri?.let { fotos.add(it) } // Permite reemplazar fotos
-        }
-    )
-
-    // Estado para afección seleccionada
+    // Estado para afecciones
     var afeccionSeleccionada by remember { mutableStateOf<Color?>(null) }
-    var puntosAfeccion by remember { mutableStateOf<List<Pair<Offset, Color>>>(emptyList()) }
-
-    // Estado para mostrar notificaciones de error
-    var mostrarErrorGuardado by remember { mutableStateOf(false) }
+    var puntosAfeccion by remember {
+        mutableStateOf(
+            paciente.historiaClinica.split(";").mapNotNull {
+                val parts = it.split(",")
+                if (parts.size == 3) {
+                    val offsetX = parts[0].toFloatOrNull() ?: 0f
+                    val offsetY = parts[1].toFloatOrNull() ?: 0f
+                    val colorValue = parts[2].toLongOrNull() ?: 0L
+                    Pair(Offset(offsetX, offsetY), Color(colorValue))
+                } else {
+                    null
+                }
+            }
+        )
+    }
 
     // Estado para el modo borrador
     var modoBorrador by remember { mutableStateOf(false) }
 
-    // ViewModel
-    val context = LocalContext.current
-    val viewModel: PacienteViewModel = viewModel(
-        factory = PacienteViewModelFactory(context.applicationContext as Application)
+    // Launcher para seleccionar nuevas fotos
+    val launcher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent(),
+        onResult = { uri ->
+            uri?.let { fotos = fotos + it }
+        }
     )
-
     val colorAzul = Color(0xFF094293) // Definimos el color #094293
 
     Column(
@@ -102,7 +102,7 @@ fun PantallaRegistro(navController: NavController) {
                     contentAlignment = Alignment.Center // Centra el texto completamente
                 ) {
                     Text(
-                        text = "Registrar Paciente",
+                        text = "Datos del Paciente",
                         textAlign = TextAlign.Center,
                         color = Color.White,
                         fontWeight = FontWeight.Bold
@@ -133,22 +133,19 @@ fun PantallaRegistro(navController: NavController) {
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Campos de texto con bordes redondeados
+            // Campos de texto para editar
             Text("Nombre:")
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(45.dp)
                     .padding(horizontal = 8.dp, vertical = 4.dp)
-                    .border(1.dp, if (errorNombre) Color.Red else Color.Gray, RoundedCornerShape(8.dp)),
+                    .border(1.dp, Color.Gray, RoundedCornerShape(8.dp)),
                 contentAlignment = Alignment.Center
             ) {
                 BasicTextField(
                     value = nombre,
-                    onValueChange = {
-                        nombre = it
-                        errorNombre = it.text.isBlank()
-                    },
+                    onValueChange = { nombre = it },
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 8.dp),
@@ -156,7 +153,6 @@ fun PantallaRegistro(navController: NavController) {
                     singleLine = true
                 )
             }
-            if (errorNombre) Text("Campo obligatorio", color = Color.Red)
 
             Text("Apellido:")
             Box(
@@ -164,15 +160,12 @@ fun PantallaRegistro(navController: NavController) {
                     .fillMaxWidth()
                     .height(45.dp)
                     .padding(horizontal = 8.dp, vertical = 4.dp)
-                    .border(1.dp, if (errorApellido) Color.Red else Color.Gray, RoundedCornerShape(8.dp)),
+                    .border(1.dp, Color.Gray, RoundedCornerShape(8.dp)),
                 contentAlignment = Alignment.Center
             ) {
                 BasicTextField(
                     value = apellido,
-                    onValueChange = {
-                        apellido = it
-                        errorApellido = it.text.isBlank()
-                    },
+                    onValueChange = { apellido = it },
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 8.dp),
@@ -180,7 +173,6 @@ fun PantallaRegistro(navController: NavController) {
                     singleLine = true
                 )
             }
-            if (errorApellido) Text("Campo obligatorio", color = Color.Red)
 
             Text("Edad:")
             Box(
@@ -188,15 +180,12 @@ fun PantallaRegistro(navController: NavController) {
                     .fillMaxWidth()
                     .height(45.dp)
                     .padding(horizontal = 8.dp, vertical = 4.dp)
-                    .border(1.dp, if (errorEdad) Color.Red else Color.Gray, RoundedCornerShape(8.dp)),
+                    .border(1.dp, Color.Gray, RoundedCornerShape(8.dp)),
                 contentAlignment = Alignment.Center
             ) {
                 BasicTextField(
                     value = edad,
-                    onValueChange = {
-                        edad = it
-                        errorEdad = it.text.toIntOrNull() == null || it.text.toInt() !in 1..120
-                    },
+                    onValueChange = { edad = it },
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 8.dp),
@@ -204,57 +193,79 @@ fun PantallaRegistro(navController: NavController) {
                     singleLine = true
                 )
             }
-            if (errorEdad) Text("La edad debe ser un número entre 1 y 120", color = Color.Red)
 
-            // Selector de Fotos (Carrusel)
-            Text("Fotos del paciente (máximo 4):")
-            LazyRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.fillMaxWidth()
+            // Fotos del paciente
+            Text("Fotos del paciente:")
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                items(fotos) { uri ->
+                fotos.forEach { uri ->
                     Box(
                         modifier = Modifier
-                            .size(100.dp)
+                            .fillMaxWidth()
+                            .aspectRatio(1f) // Ajusta la relación de aspecto
                             .clickable {
-                                // Reemplazar la foto existente
-                                fotos.remove(uri)
-                                launcher.launch("image/*")
+                                // Aquí puedes agregar lógica para expandir la imagen si lo deseas
                             }
                     ) {
                         Image(
                             painter = rememberAsyncImagePainter(uri),
                             contentDescription = "Foto del paciente",
                             modifier = Modifier
-                                .fillMaxSize()
+                                .fillMaxWidth()
+                                .aspectRatio(1f) // Ajusta la relación de aspecto
                                 .border(1.dp, Color.Gray, RoundedCornerShape(8.dp)),
-                            contentScale = ContentScale.Crop
+                            contentScale = ContentScale.Fit // Asegura que la imagen no se recorte
+                        )
+                        // Botón para eliminar la foto
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "Eliminar foto",
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .clickable {
+                                    fotos = fotos.filterNot { it == uri }
+                                }
+                                .padding(4.dp)
+                                .background(Color.White, CircleShape)
+                        )
+                        // Botón para reemplazar la foto
+                        Icon(
+                            imageVector = Icons.Default.Edit,
+                            contentDescription = "Reemplazar foto",
+                            modifier = Modifier
+                                .align(Alignment.BottomEnd)
+                                .clickable {
+                                    fotos = fotos.filterNot { it == uri }
+                                    launcher.launch("image/*")
+                                }
+                                .padding(4.dp)
+                                .background(Color.White, CircleShape)
                         )
                     }
                 }
                 if (fotos.size < 4) {
-                    item {
-                        Box(
-                            modifier = Modifier
-                                .size(100.dp)
-                                .background(Color.LightGray, RoundedCornerShape(8.dp))
-                                .clickable { launcher.launch("image/*") },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text("+")
-                        }
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(200.dp)
+                            .background(Color.LightGray, RoundedCornerShape(8.dp))
+                            .clickable { launcher.launch("image/*") },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("+")
                     }
                 }
             }
 
-            // Modelo Dental con animaciones
-            Text("Seleccione afecciones en el modelo dental:")
+            // Modelo dental con afecciones
+            Text("Afecciones en el modelo dental:")
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(200.dp)
             ) {
-                // Contenedor de la imagen
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -279,12 +290,11 @@ fun PantallaRegistro(navController: NavController) {
                             }
                         }
                 ) {
-                    // Imagen del modelo dental
                     Image(
                         painter = painterResource(id = R.drawable.modelo_dental),
                         contentDescription = "Modelo dental",
                         modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Fit // Usar Fit para mantener la proporción de la imagen
+                        contentScale = ContentScale.Fit
                     )
 
                     // Dibuja los puntos de afección con animaciones
@@ -305,7 +315,7 @@ fun PantallaRegistro(navController: NavController) {
                 }
             }
 
-            // Paleta de Colores (solo rojo y amarillo) y botón de borrador
+            // Paleta de colores y botón de borrador
             Text("Selecciona un color para marcar o activar el borrador:")
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 listOf(Color.Red, Color.Yellow).forEach { color ->
@@ -343,23 +353,17 @@ fun PantallaRegistro(navController: NavController) {
                     .fillMaxWidth()
                     .height(100.dp)
                     .padding(8.dp)
-                    .border(1.dp, if (errorObservaciones) Color.Red else Color.Gray, RoundedCornerShape(8.dp)),
+                    .border(1.dp, Color.Gray, RoundedCornerShape(8.dp)),
                 contentAlignment = Alignment.Center
             ) {
                 BasicTextField(
                     value = observaciones,
-                    onValueChange = {
-                        observaciones = it
-                        errorObservaciones = it.text.length > 500
-                    },
+                    onValueChange = { observaciones = it },
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 8.dp),
                     textStyle = LocalTextStyle.current.copy(textAlign = TextAlign.Center)
                 )
-            }
-            if (errorObservaciones) {
-                Text("Las observaciones no pueden exceder los 500 caracteres", color = Color.Red)
             }
 
             // Campo Monto
@@ -367,17 +371,14 @@ fun PantallaRegistro(navController: NavController) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(55.dp)
+                    .height(45.dp)
                     .padding(8.dp)
-                    .border(1.dp, if (errorMonto) Color.Red else Color.Gray, RoundedCornerShape(8.dp)),
+                    .border(1.dp, Color.Gray, RoundedCornerShape(8.dp)),
                 contentAlignment = Alignment.Center
             ) {
                 BasicTextField(
                     value = monto,
-                    onValueChange = {
-                        monto = it
-                        errorMonto = it.text.toDoubleOrNull() == null || it.text.toDouble() < 0
-                    },
+                    onValueChange = { monto = it },
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 8.dp),
@@ -385,7 +386,6 @@ fun PantallaRegistro(navController: NavController) {
                     singleLine = true
                 )
             }
-            if (errorMonto) Text("El monto debe ser un número positivo", color = Color.Red)
 
             // Estado de Pago
             Text("Estado de Pago:")
@@ -438,17 +438,14 @@ fun PantallaRegistro(navController: NavController) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(55.dp)
+                        .height(45.dp)
                         .padding(8.dp)
-                        .border(1.dp, if (errorAbono) Color.Red else Color.Gray, RoundedCornerShape(8.dp)),
+                        .border(1.dp, Color.Gray, RoundedCornerShape(8.dp)),
                     contentAlignment = Alignment.Center
                 ) {
                     BasicTextField(
                         value = abono,
-                        onValueChange = {
-                            abono = it
-                            errorAbono = it.text.toDoubleOrNull() == null || it.text.toDouble() < 0
-                        },
+                        onValueChange = { abono = it },
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 8.dp),
@@ -456,54 +453,33 @@ fun PantallaRegistro(navController: NavController) {
                         singleLine = true
                     )
                 }
-                if (errorAbono) Text("El abono debe ser un número positivo", color = Color.Red)
             }
 
-            // Botón Guardar
+            // Botón para guardar cambios
             Button(
                 onClick = {
-                    errorNombre = nombre.text.isBlank()
-                    errorApellido = apellido.text.isBlank()
-                    errorEdad = edad.text.toIntOrNull() == null || edad.text.toInt() !in 1..120
-                    errorObservaciones = observaciones.text.length > 500
-                    errorMonto = monto.text.toDoubleOrNull() == null || monto.text.toDouble() < 0
-                    errorAbono = if (estadoPago == "Abonó") abono.text.toDoubleOrNull() == null || abono.text.toDouble() < 0 else false
+                    val montoValido = monto.toIntOrNull() ?: 0
+                    val abonoValido = abono.toIntOrNull() ?: 0
 
-                    // Verificación de puntosAfeccion
-                    if (puntosAfeccion.isEmpty()) {
-                        mostrarErrorGuardado = true
-                        return@Button
-                    }
+                    errorMonto = montoValido < 0
+                    errorAbono = abonoValido < 0
 
-                    // Imprimir cada punto para verificar su contenido
-                    puntosAfeccion.forEachIndexed { index, (offset, color) ->
-                        println("Punto $index: Offset(${offset.x}, ${offset.y}), Color(${color.value.toInt()})")
-                    }
-
-                    // Convertir puntos de afección a una cadena de texto
-                    val puntosAfeccionTexto = puntosAfeccion.joinToString(";") { (offset, color) ->
-                        "${offset.x},${offset.y},${color.value.toInt()}"
-                    }
-
-                    // Imprimir el resultado final
-                    println("Puntos de afección convertidos a texto: $puntosAfeccionTexto")
-
-                    if (!errorNombre && !errorApellido && !errorEdad && !errorObservaciones && !errorMonto && !errorAbono) {
-                        val paciente = Paciente(
-                            nombre = nombre.text,
-                            apellido = apellido.text,
-                            edad = edad.text.toIntOrNull() ?: 0,
+                    if (!errorMonto && !errorAbono) {
+                        val pacienteActualizado = paciente.copy(
+                            nombre = nombre,
+                            apellido = apellido,
+                            edad = edad.toIntOrNull() ?: 0,
+                            observaciones = observaciones,
                             fotos = fotos.map { it.toString() },
-                            historiaClinica = puntosAfeccionTexto, // Guardar puntos de afección como cadena
-                            observaciones = observaciones.text,
+                            historiaClinica = puntosAfeccion.joinToString(";") { (offset, color) ->
+                                "${offset.x},${offset.y},${color.value.toInt()}"
+                            },
                             estadoPago = estadoPago,
-                            monto = monto.text.toDoubleOrNull() ?: 0.0,
-                            abono = if (estadoPago == "Abonó") abono.text.toDoubleOrNull() ?: 0.0 else 0.0
+                            monto = montoValido.toDouble(),
+                            abono = abonoValido.toDouble()
                         )
-                        viewModel.insertarPaciente(paciente)
+                        viewModel.actualizarPaciente(pacienteActualizado)
                         navController.popBackStack()
-                    } else {
-                        mostrarErrorGuardado = true
                     }
                 },
                 modifier = Modifier
@@ -513,16 +489,7 @@ fun PantallaRegistro(navController: NavController) {
                     containerColor = colorAzul // Usamos el color #094293
                 )
             ) {
-                Text("Guardar Paciente", color = Color.White)
-            }
-
-            // Notificación de error si el guardado falla
-            if (mostrarErrorGuardado) {
-                Text(
-                    text = "Por favor, complete todos los campos correctamente.",
-                    color = Color.Red,
-                    modifier = Modifier.padding(8.dp)
-                )
+                Text("Actualizar Datos", color = Color.White)
             }
         }
     }

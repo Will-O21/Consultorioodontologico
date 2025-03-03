@@ -12,19 +12,13 @@
             android:supportsRtl="true"
             android:theme="@style/Theme.ConsultorioOdontológico"
             tools:targetApi="31">
-        <activity
-                android:name="com.wdog.consultorioodontologico.RegisteractivityActivity"
-                android:exported="false" />
-        <activity
-                android:name="com.wdog.consultorioodontologico.MenuactivityActivity"
-                android:exported="false" />
+
         <activity
                 android:name="com.wdog.consultorioodontologico.MainActivity"
                 android:exported="true"
                 android:theme="@style/Theme.ConsultorioOdontológico">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
