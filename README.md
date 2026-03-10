@@ -5,11 +5,8 @@ Este proyecto es una aplicación Android desarrollada en Kotlin para la gestión
 
 Tabla de Contenidos
 Características
-
 Tecnologías Utilizadas
-
 Requisitos del Sistema
-
 Configuración del Proyecto
 
 Estructura del Proyecto
@@ -151,57 +148,109 @@ Consultorioodontologico/
 ├── build.gradle.kts
 ├── settings.gradle.kts
 └── gradle.properties
-Funcionalidades Detalladas
-1. Registro de Pacientes
-Formulario: Campos para nombre, apellido, edad, y hasta 4 fotos.
+Arquitectura y Estructura del Proyecto
+La aplicación está desarrollada utilizando una arquitectura Model-View-ViewModel (MVVM), lo que permite una clara separación de responsabilidades entre la lógica de negocio (ViewModel), la interfaz de usuario (UI) y los datos (Model). Se utiliza Room como base de datos local para almacenar pacientes, citas y notas. La interfaz de usuario está construida completamente con Jetpack Compose, lo que permite una experiencia moderna y reactiva. La navegación entre pantallas se gestiona mediante NavController y AppNavigation, y las operaciones asíncronas se manejan con corrutinas.
 
-Historia Clínica Interactiva: Modelo dental gráfico con paleta de colores personalizable para marcar afecciones.
+Funcionalidades Principales
+1. Gestión de Pacientes
+Registro de Pacientes: Permite registrar nuevos pacientes con campos como nombre, apellido, edad, fotos, observaciones y una historia clínica interactiva.
 
-Almacenamiento: Datos guardados en Room Database.
+Subida de Fotos: Se pueden subir hasta 4 fotos usando ActivityResultContracts.GetContent().
+
+Historia Clínica Interactiva: Un modelo dental gráfico permite marcar afecciones con una paleta de colores (rojo y amarillo). Los puntos de afección se guardan como coordenadas y colores en la base de datos.
+
+Validaciones: Se realizan validaciones en los campos de nombre, apellido, edad, observaciones, monto y abono.
+
+Edición de Pacientes: Permite editar la información de un paciente existente, incluyendo la historia clínica interactiva.
+
+Listado de Pacientes: Muestra una lista de pacientes registrados, con opciones para ver detalles, editar o eliminar pacientes.
 
 2. Gestión de Citas
-Integración con Google Calendar: Sincronización de citas agendadas.
+Agendar Citas: Permite agendar nuevas citas, seleccionando un paciente, fecha, hora y observaciones.
 
-Notificaciones Push: Recordatorios de citas mediante Firebase Cloud Messaging.
+Notificaciones Locales: Se programan notificaciones locales usando WorkManager para recordar las citas agendadas.
+
+Validaciones: Se validan la fecha, hora, paciente seleccionado y observaciones.
+
+Listado de Citas: Muestra una lista de citas agendadas, con opciones para ver detalles, editar o eliminar citas.
+
+Detalle de Citas: Muestra los detalles de una cita y permite editar la fecha, hora y observaciones.
 
 3. Gestión de Pagos
-Registro de Pagos: Métodos de pago, abonos y deudas.
+Registro de Pagos: Permite gestionar los pagos de los pacientes, incluyendo el estado de pago (Pendiente, Abonó, Completo), monto y abono.
 
-Reportes: Exportación de reportes en PDF.
+Cálculo de Deudas: Se calcula automáticamente la deuda restante basada en el monto total y el abono.
 
-4. Funcionamiento Offline
-Sincronización en Segundo Plano: Uso de WorkManager para sincronizar datos cuando hay conexión.
+Edición de Pagos: Permite editar el estado de pago, monto y abono de un paciente.
 
-Próximos Pasos
-Implementar Autenticación: Añadir inicio de sesión seguro para el usuario principal (odontólogo).
+4. Gestión del Consultorio
+Notas del Consultorio: Permite gestionar notas relacionadas con el consultorio, como fallas o necesidades. Las notas se pueden agregar, editar y eliminar.
 
-Mejorar la Interfaz: Optimizar la UI/UX basada en feedback.
+Colores de Notas: Las notas pueden tener un color asociado (rojo, amarillo, verde) para indicar su prioridad.
 
-Pruebas y Depuración: Realizar pruebas unitarias y de UI para garantizar la calidad del código.
+5. Pantalla de Inicio
+Navegación: Es la pantalla principal de la aplicación, con botones para navegar a las diferentes secciones (Registro, Pacientes, Citas, Pagos, Gestión del Consultorio).
 
-Despliegue: Preparar la aplicación para su publicación en Google Play Store.
+Integración con Firebase
+Firebase Messaging: Configurado para notificaciones push, aunque aún no se ha implementado completamente la lógica para enviar notificaciones desde Firebase.
 
-Cómo Contribuir
-¡Las contribuciones son bienvenidas! Si deseas contribuir a este proyecto, sigue estos pasos:
+Firebase Authentication: Configurado, pero aún no se ha implementado la autenticación del usuario principal (odontólogo).
 
-Haz un fork del repositorio.
+Funcionamiento Offline
+Room Database: La aplicación funciona completamente offline, utilizando Room para almacenar todos los datos localmente. Las operaciones de sincronización con Firebase aún no están implementadas.
 
-Crea una rama para tu contribución:
+Diseño y Estilo
+Material Design 3: La aplicación utiliza Material Design 3 para la interfaz de usuario, con colores personalizados basados en el logo del consultorio.
 
-bash
-Copy
-git checkout -b nombre-de-tu-rama
-Realiza tus cambios y haz commit:
+Tema Personalizado: El tema de la aplicación está definido en Theme.kt, aunque aún no se han personalizado completamente los colores y estilos.
 
-bash
-Copy
-git commit -m "Descripción de tus cambios"
-Envía tus cambios:
+Requerimientos Originales Cubiertos
+Registro de Pacientes: Campos para nombre, apellido, edad, fotos y observaciones. Historia clínica interactiva con modelo dental y paleta de colores.
 
-bash
-Copy
-git push origin nombre-de-tu-rama
-Abre un Pull Request en GitHub.
+Gestión de Citas: Agendar, editar y eliminar citas. Notificaciones locales para recordatorios de citas.
+
+Gestión de Pagos: Registro de pagos, abonos y deudas. Cálculo automático de saldos pendientes.
+
+Funcionamiento Offline: Uso de Room Database para almacenamiento local.
+
+Diseño Minimalista: Interfaz de usuario basada en Material Design 3 con colores personalizados.
+
+Lo que Falta
+Integración con Google Calendar: Sincronización de citas con Google Calendar.
+
+Notificaciones Push con Firebase: Lógica para enviar notificaciones push desde Firebase.
+
+Autenticación del Usuario Principal: Autenticación del odontólogo usando Firebase Authentication.
+
+Generación de Reportes en PDF: Exportación de reportes en PDF para los pagos.
+
+Sincronización Offline-Online: Sincronización de datos con Firebase Firestore cuando hay conexión a internet.
+
+Historia Clínica Interactiva Completa: Más colores para representar diferentes afecciones y mejorar la interacción con el modelo dental.
+
+Testing: Pruebas unitarias y de UI exhaustivas.
+
+Mejoras Sugeridas
+Integración con Google Calendar: Sincronización de citas con Google Calendar.
+
+Notificaciones Push: Implementar la lógica para enviar notificaciones push desde Firebase Cloud Messaging.
+
+Autenticación Segura: Implementar la autenticación del odontólogo usando Firebase Authentication.
+
+Generación de Reportes en PDF: Usar una librería como iTextPDF para generar reportes en PDF.
+
+Mejoras en la Historia Clínica Interactiva: Agregar más colores y permitir zoom y desplazamiento.
+
+Sincronización Offline-Online: Implementar la sincronización de datos con Firebase Firestore usando WorkManager.
+
+Testing: Implementar pruebas unitarias y de UI.
+
+Optimización del Código: Refactorizar el código para mejorar la legibilidad y el rendimiento.
+
+Diseño y Experiencia de Usuario: Mejorar la UI/UX basada en feedback de usuarios.
+
+¡Las contribuciones son bienvenidas! Si deseas contribuir a este proyecto.
+
 
 Licencia
 Este proyecto está bajo la licencia MIT.

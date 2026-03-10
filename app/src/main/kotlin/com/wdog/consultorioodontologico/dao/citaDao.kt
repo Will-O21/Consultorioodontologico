@@ -10,15 +10,18 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface CitaDao {
-    @Insert
-    suspend fun insert(cita: Cita)
 
-    @Query("SELECT * FROM citas ORDER BY fechaHora DESC")
-    fun getAllCitas(): Flow<List<Cita>> // Método correctamente implementado
+    @Insert(onConflict = androidx.room.OnConflictStrategy.REPLACE)
+    suspend fun insert(cita: Cita): Long
+
+    @Query("SELECT COUNT(*) FROM citas WHERE fechaHora >= :inicio AND fechaHora <= :fin")
+    suspend fun contarCitasDelDia(inicio: java.time.LocalDateTime, fin: java.time.LocalDateTime): Int
+    @Query("SELECT * FROM citas ORDER BY fechaHora ASC")
+    fun getAllCitas(): Flow<List<Cita>>
 
     @Update
-    suspend fun updateCita(cita: Cita) // Método para actualizar una cita
+    suspend fun updateCita(cita: Cita)
 
     @Delete
-    suspend fun deleteCita(cita: Cita) // Método para eliminar una cita
+    suspend fun deleteCita(cita: Cita)
 }

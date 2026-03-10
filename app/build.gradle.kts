@@ -1,11 +1,25 @@
 plugins {
     alias(libs.plugins.android.application)
-    id("org.jetbrains.kotlin.android") version "2.1.10" // Versión actualizada
+    alias(libs.plugins.kotlin.android)// Versión actualizada
     alias(libs.plugins.kotlin.compose)
     id("kotlin-kapt") // Para procesamiento de anotaciones (ej: Room)
+    id("com.google.gms.google-services")
+    id ("com.google.dagger.hilt.android")
+    kotlin("plugin.serialization")// Añade este plugin
+    alias(libs.plugins.ksp) // <--- AGREGAR ESTO
 }
 
 dependencies {
+
+    implementation(libs.play.services.auth)
+
+    // ---------------------------------------------------------------
+    // Para tomar valores de internet
+    implementation(libs.jsoup)
+    // ---------------------------------------------------------------
+    // Serialización
+    // ---------------------------------------------------------------
+    implementation (libs.kotlinx.serialization.json)
     // ---------------------------------------------------------------
     // Sheets-Compose-Dialogs (Componentes UI personalizados)
     // ---------------------------------------------------------------
@@ -32,6 +46,14 @@ dependencies {
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.runtime)
     implementation(libs.androidx.activity)
+    implementation(libs.androidx.hilt.common)
+    implementation(libs.androidx.espresso.core)
+    implementation(libs.firebase.storage.ktx)
+    implementation(libs.androidx.compose.runtime.livedata)
+    implementation(libs.androidx.compose.material3)
+    implementation(libs.androidx.compose.foundation)
+    implementation(libs.androidx.compose.foundation.layout)
+    implementation(libs.androidx.games.activity)
     testImplementation(libs.androidx.runner)
     debugImplementation(libs.androidx.ui.tooling) // Preview en modo debug
 
@@ -50,7 +72,7 @@ dependencies {
     implementation(libs.gson) // Serialización JSON
     implementation(libs.androidx.room.runtime) // Base de datos local
     implementation(libs.room.ktx) // Coroutines para Room
-    kapt(libs.room.compiler)// Procesador de Room
+    ksp(libs.androidx.room.compiler)
     // ---------------------------------------------------------------
     // Coroutines
     // ---------------------------------------------------------------
@@ -72,6 +94,8 @@ dependencies {
     // ---------------------------------------------------------------
     // Firebase (Notificaciones push)
     // ---------------------------------------------------------------
+
+    implementation(platform(libs.firebase.bom)) // Controla todas las versiones automáticamente
     implementation(libs.firebase.messaging)
     implementation(libs.firebase.firestore)
     implementation(libs.firebase.auth)
@@ -79,12 +103,21 @@ dependencies {
     implementation (libs.google.firebase.firestore.ktx)
     implementation (libs.firebase.analytics.ktx)
     implementation (libs.google.firebase.messaging.ktx)
-    implementation (libs.androidx.core.ktx)
-    implementation (libs.androidx.appcompat)
-    implementation (libs.material)
-    implementation (libs.androidx.constraintlayout)
+    implementation(libs.firebase.analytics)
 
-        implementation (libs.androidx.work.runtime.ktx) // WorkManager
+    // WorkManager
+        implementation (libs.androidx.work.runtime.ktx)
+
+    // Dependencias básicas de Hilt
+    implementation (libs.hilt.android) // Versión más reciente
+    kapt (libs.hilt.android.compiler)
+    implementation(libs.androidx.hilt.work)
+    implementation(libs.androidx.hilt.navigation.compose)
+    // Para @HiltViewModel
+    //implementation (libs.androidx.hilt.lifecycle.viewmodel)
+    //kapt (libs.androidx.hilt.compiler)
+
+
 
     // Testing avanzado
     testImplementation(libs.mockk)
@@ -93,10 +126,10 @@ dependencies {
     testImplementation(libs.kotlinx.coroutines.test)
 
         // Dependencias para pruebas de UI
-    androidTestImplementation("androidx.compose.ui:ui-test-junit4:1.7.8")
+    androidTestImplementation(libs.ui.test.junit4)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
-    testImplementation("app.cash.turbine:turbine:0.12.1")
+    testImplementation(libs.turbine)
     // ---------------------------------------------------------------
     // Testing
     // ---------------------------------------------------------------
@@ -116,11 +149,11 @@ dependencies {
 }
 
 android {
-    namespace = "com.wdog.consultorioodontolgico"
+    namespace = "com.wdog.consultorioodontologico"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.wdog.consultorioodontolgico"
+        applicationId = "com.wdog.consultorioodontologico"
         minSdk = 29
         targetSdk = 35
         versionCode = 1
@@ -141,8 +174,14 @@ android {
     kapt {
         useBuildCache = true
         correctErrorTypes = true
+        arguments {
 
+        }
+    }
 
+    ksp {
+        arg("room.schemaLocation", "$projectDir/schemas")
+    }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
@@ -150,6 +189,10 @@ android {
 
     kotlinOptions {
         jvmTarget = "17"
+        languageVersion = "2.0"  // ¡Clave! Forzar versión compatible
+        freeCompilerArgs = freeCompilerArgs + listOf(
+            "-opt-in=kotlin.RequiresOptIn"
+        )
     }
 
     buildFeatures {
@@ -159,9 +202,15 @@ android {
 
 configurations.all {
     resolutionStrategy {
-        force("org.jetbrains.kotlinx:kotlinx-metadata-jvm:0.9.0") // Versión compatible con Room 2.7.0
-    }}
+        eachDependency {
+            if (requested.group == "org.jetbrains.kotlinx" && requested.name == "kotlinx-metadata-jvm") {
+                useVersion("0.9.0") // Esta versión es compatible con Kotlin 2.x
+            }
+        }
+    }
 }
+
+
 
 allprojects {
     repositories {

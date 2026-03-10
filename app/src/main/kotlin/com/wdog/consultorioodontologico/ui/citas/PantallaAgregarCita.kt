@@ -3,27 +3,35 @@ package com.wdog.consultorioodontologico.ui.citas
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.workDataOf
+import coil.compose.AsyncImage
 import com.maxkeppeker.sheets.core.models.base.UseCaseState
 import com.maxkeppeler.sheets.calendar.CalendarDialog
 import com.maxkeppeler.sheets.calendar.models.CalendarConfig
@@ -35,281 +43,371 @@ import com.wdog.consultorioodontologico.entities.Paciente
 import com.wdog.consultorioodontologico.viewmodels.CitaViewModel
 import com.wdog.consultorioodontologico.viewmodels.PacienteViewModel
 import com.wdog.consultorioodontologico.workers.NotificacionWorker
+import java.io.File
 import java.time.LocalDateTime
-import java.util.concurrent.TimeUnit
 import java.time.format.DateTimeFormatter
-
-
+import java.util.concurrent.TimeUnit
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.expandVertically
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PantallaAgregarCita(
     navController: NavController,
     citaViewModel: CitaViewModel,
-    pacienteViewModel: PacienteViewModel
+    pacienteViewModel: PacienteViewModel,
+    presupuestoViewModel: com.wdog.consultorioodontologico.viewmodels.PresupuestoViewModel = androidx.hilt.navigation.compose.hiltViewModel()
 ) {
+    // --- ESTADOS ---
     var fechaSeleccionada by remember { mutableStateOf(LocalDateTime.now()) }
     val pacientes by pacienteViewModel.todosLosPacientes.collectAsState(initial = emptyList())
     var pacienteSeleccionado by remember { mutableStateOf<Paciente?>(null) }
-    var observaciones by remember { mutableStateOf("") }
-    var mostrarBusqueda by remember { mutableStateOf(false) }
+    val catalogoServicios by presupuestoViewModel.listaServiciosBase.collectAsState(initial = emptyList())
+    var servicioSeleccionado by remember { mutableStateOf("") }
+    var expandedServicios by remember { mutableStateOf(false) }
+    var comentarios by remember { mutableStateOf("") }
     var textoBusqueda by remember { mutableStateOf("") }
-
-    // Formateadores
-    val dateFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy") // Solo fecha
-    val timeFormatter = DateTimeFormatter.ofPattern("hh:mm a") // Solo hora
-    val dateTimeFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy | hh:mm a") // Fecha y hora
-
-    // Estados para errores de validación
-    var errorFecha by remember { mutableStateOf(false) }
-    var errorPaciente by remember { mutableStateOf(false) }
-    var errorObservaciones by remember { mutableStateOf(false) }
-
-    // Estados personalizados para los diálogos
+    val scrollState = rememberScrollState() // <--- AGREGAR ESTA LÍNEA
     val calendarState = remember { UseCaseState() }
     val clockState = remember { UseCaseState() }
-
-    // Contexto
     val context = LocalContext.current
 
-    val colorAzulTitulo = Color(0xFF101084) // Color azul para la barra de título
-    val colorAzulBotones = Color(0xFF094293) // Color azul para los botones
+    // Formateadores
+    val dateFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy")
+    val timeFormatter = DateTimeFormatter.ofPattern("hh:mm a")
+    val dateTimeFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy | hh:mm a")
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp)
-    ) {
-        // Barra de título superior
-        TopAppBar(
-            title = {
-                Box(
-                    modifier = Modifier.fillMaxWidth(), // Ocupa todo el ancho
-                    contentAlignment = Alignment.Center // Centra el texto horizontalmente
-                ) {
-                    Text(
-                        text = "Agendar Cita",
-                        color = Color.White, // Texto en color blanco
-                        fontWeight = FontWeight.Bold // Texto en negritas
-                    )
-                }
-            },
-            colors = TopAppBarDefaults.topAppBarColors(
-                containerColor = colorAzulTitulo, // Color de fondo azul #101084
-                titleContentColor = Color.White // Texto en color blanco
-            ),
-            modifier = Modifier.fillMaxWidth() // Asegura que el TopAppBar ocupe todo el ancho
-        )
+    val colorAzulOscuro = Color(0xFF101084)
+    val colorAzulBotones = Color(0xFF094293)
+    val colorFondo = Color(0xFFF8F9FA)
 
-        // Botón "Atrás" debajo de la barra de título
-        Button(
-            onClick = { navController.popBackStack() },
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = colorAzulBotones // Usamos el color #094293
-            )
-        ) {
-            Text("Atrás", color = Color.White)
+    // --- DIÁLOGOS (LÓGICA) ---
+    CalendarDialog(
+        state = calendarState,
+        config = CalendarConfig(
+            monthSelection = true,
+            // Restringimos: Desde hoy hasta 2 años en el futuro
+            boundary = java.time.LocalDate.now()..java.time.LocalDate.now().plusYears(2)
+        ),
+        selection = CalendarSelection.Date { newDate ->
+            fechaSeleccionada = newDate.atTime(fechaSeleccionada.toLocalTime())
         }
-
-        // Botón para seleccionar fecha
-        Button(
-            onClick = { calendarState.show() },
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 16.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = colorAzulBotones // Usamos el color #094293
-            )
-        ) {
-            Text("Seleccionar  Fecha:  ${fechaSeleccionada.format(dateFormatter)}", color = Color.White) // Solo fecha
+    )
+    ClockDialog(
+        state = clockState,
+        selection = ClockSelection.HoursMinutes { horas, minutos ->
+            fechaSeleccionada = fechaSeleccionada.toLocalDate().atTime(horas, minutos)
         }
-        if (errorFecha) {
-            Text("La fecha no puede ser en el pasado", color = Color.Red)
-        }
+    )
 
-        // Botón para seleccionar hora
-        Button(
-            onClick = { clockState.show() },
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 16.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = colorAzulBotones // Usamos el color #094293
-            )
-        ) {
-            Text("Seleccionar  Hora:  ${fechaSeleccionada.format(timeFormatter)}", color = Color.White) // Solo hora
-        }
-
-        // Diálogo de Fecha
-        CalendarDialog(
-            state = calendarState,
-            config = CalendarConfig(monthSelection = true),
-            selection = CalendarSelection.Date { newDate ->
-                fechaSeleccionada = newDate.atTime(fechaSeleccionada.toLocalTime())
-                errorFecha = fechaSeleccionada.isBefore(LocalDateTime.now()) // Validación de fecha
-                calendarState.hide()
-            }
-        )
-
-        // Diálogo de Hora
-        ClockDialog(
-            state = clockState,
-            selection = ClockSelection.HoursMinutes { horas, minutos ->
-                fechaSeleccionada = fechaSeleccionada.toLocalDate().atTime(horas, minutos)
-                errorFecha = fechaSeleccionada.isBefore(LocalDateTime.now()) // Validación de fecha
-                clockState.hide()
-            }
-        )
-
-        // Botón de lupa para activar la búsqueda
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = "Seleccionar Paciente:",
-                style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.weight(1f)
-            )
-            IconButton(
-                onClick = { mostrarBusqueda = !mostrarBusqueda },
-                modifier = Modifier.padding(start = 8.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Search,
-                    contentDescription = "Buscar paciente",
-                    tint = colorAzulBotones
-                )
-            }
-        }
-
-        // Casilla de búsqueda (solo visible si mostrarBusqueda es true)
-        if (mostrarBusqueda) {
-            TextField(
-                value = textoBusqueda,
-                onValueChange = { textoBusqueda = it },
-                label = { Text("Buscar paciente por nombre", color = Color.Black) },
+    Scaffold(
+        topBar = {
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(bottom = 8.dp),
-                colors = TextFieldDefaults.colors(
-                    focusedContainerColor = colorAzulBotones.copy(alpha = 0.1f),
-                    unfocusedContainerColor = colorAzulBotones.copy(alpha = 0.1f),
-                    focusedIndicatorColor = colorAzulBotones,
-                    unfocusedIndicatorColor = colorAzulBotones,
-                    focusedLabelColor = Color.Black,
-                    unfocusedLabelColor = Color.Black
-                ),
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                keyboardActions = KeyboardActions(onDone = { mostrarBusqueda = false })
-            )
+                    .clip(RoundedCornerShape(bottomStart = 32.dp, bottomEnd = 32.dp))
+                    .background(colorAzulOscuro)
+                    .padding(top = 0.dp, bottom = 25.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text("Agendar Cita", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+            }
         }
-
-        // Lista de Pacientes (con scroll)
-        LazyColumn(
+    ) { paddingValues ->
+        Column(
             modifier = Modifier
-                .height(200.dp)
-                .padding(vertical = 8.dp)
+                .fillMaxSize()
+                .background(colorFondo)
+                .padding(paddingValues)
+                .verticalScroll(scrollState)
+                .padding(16.dp)
         ) {
-            val pacientesFiltrados = pacientes
-                .filter { it.nombre.contains(textoBusqueda, ignoreCase = true) }
-                .sortedBy { it.nombre }
+            // --- 1. SELECCIÓN DE FECHA Y HORA (FILA MODERNA) ---
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                BotonSeleccionRapida(
+                    label = "Fecha",
+                    valor = fechaSeleccionada.format(dateFormatter),
+                    icono = Icons.Default.CalendarMonth,
+                    color = colorAzulBotones,
+                    modifier = Modifier.weight(1f),
+                    onClick = { calendarState.show() }
+                )
+                BotonSeleccionRapida(
+                    label = "Hora",
+                    valor = fechaSeleccionada.format(timeFormatter),
+                    icono = Icons.Default.Schedule,
+                    color = colorAzulBotones,
+                    modifier = Modifier.weight(1f),
+                    onClick = { clockState.show() }
+                )
+            }
 
-            items(pacientesFiltrados) { paciente ->
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable {
-                            pacienteSeleccionado = if (pacienteSeleccionado == paciente) null else paciente
-                        }
-                        .padding(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "${paciente.nombre} ${paciente.apellido}",
-                        modifier = Modifier.weight(1f)
-                    )
-                    Checkbox(
-                        checked = pacienteSeleccionado == paciente,
-                        onCheckedChange = { isChecked ->
-                            pacienteSeleccionado = if (isChecked) paciente else null
-                        }
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // --- 2. BÚSQUEDA DE PACIENTE ---
+            Text("Seleccionar Paciente", fontWeight = FontWeight.Bold, color = colorAzulOscuro)
+            Spacer(modifier = Modifier.height(8.dp))
+            OutlinedTextField(
+                value = textoBusqueda,
+                onValueChange = { textoBusqueda = it },
+                placeholder = { Text("Buscar paciente...") },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(30.dp),
+                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = colorAzulBotones) },
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedContainerColor = Color.White,
+                    unfocusedContainerColor = Color.White
+                ),
+                singleLine = true
+            )
+
+            // --- 3. LISTA DE PACIENTES (CARDS CON FOTO) ---
+            LazyColumn(
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(vertical = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                val filtrados = pacientes.filter { it.nombre.contains(textoBusqueda, true) }.sortedBy { it.nombre }
+                items(filtrados) { paciente ->
+                    ItemSeleccionPaciente(
+                        paciente = paciente,
+                        estaSeleccionado = pacienteSeleccionado == paciente,
+                        colorAzul = colorAzulBotones,
+                        onSelect = { pacienteSeleccionado = if (pacienteSeleccionado == paciente) null else paciente }
                     )
                 }
             }
-        }
-        if (errorPaciente) {
-            Text("Debe seleccionar un paciente", color = Color.Red)
-        }
 
-        // Campo de Observaciones
-        TextField(
-            value = observaciones,
-            onValueChange = {
-                observaciones = it
-                errorObservaciones = it.length > 500 // Validación de longitud
-            },
-            label = { Text("Observaciones", color = Color.Black) }, // Texto del label en color negro
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(150.dp)
-                .padding(vertical = 8.dp),
-            colors = TextFieldDefaults.colors(
-                focusedContainerColor = colorAzulBotones.copy(alpha = 0.1f), // Fondo cuando está enfocado
-                unfocusedContainerColor = colorAzulBotones.copy(alpha = 0.1f), // Fondo cuando no está enfocado
-                focusedIndicatorColor = colorAzulBotones, // Color del indicador cuando está enfocado
-                unfocusedIndicatorColor = colorAzulBotones, // Color del indicador cuando no está enfocado
-                focusedLabelColor = Color.Black, // Color del label cuando está enfocado
-                unfocusedLabelColor = Color.Black // Color del label cuando no está enfocado
-            ),
-            isError = errorObservaciones
-        )
-        if (errorObservaciones) {
-            Text("Las observaciones no pueden exceder los 500 caracteres", color = Color.Red)
-        }
-
-        // Botón Guardar
-        Button(
-            onClick = {
-                errorFecha = fechaSeleccionada.isBefore(LocalDateTime.now())
-                errorPaciente = pacienteSeleccionado == null
-                errorObservaciones = observaciones.length > 500
-
-                if (!errorFecha && !errorPaciente && !errorObservaciones) {
-                    pacienteSeleccionado?.let { paciente ->
-                        val cita = Cita(
-                            pacienteId = paciente.id,
-                            pacienteNombre = "${paciente.nombre} ${paciente.apellido}",
-                            fechaHora = fechaSeleccionada,
-                            observaciones = observaciones
+            // --- BLOQUE ANIMADO Y RESALTADO ---
+            AnimatedVisibility(
+                visible = pacienteSeleccionado != null,
+                enter = fadeIn() + expandVertically()
+            ) {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 10.dp, bottom = 20.dp),
+                    shape = RoundedCornerShape(24.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Text(
+                            "Detalles de la Cita",
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = colorAzulOscuro
                         )
-                        citaViewModel.insertarCita(cita)
 
-                        // Programar notificación (pasando dateTimeFormatter como parámetro)
-                        programarNotificacion(cita, context, dateTimeFormatter)
+                        // --- PROCEDIMIENTO ---
+                        Column {
+                            Text("Procedimiento", fontWeight = FontWeight.Bold, color = colorAzulOscuro, fontSize = 14.sp)
+                            Spacer(modifier = Modifier.height(4.dp))
 
-                        navController.popBackStack()
+                            if (catalogoServicios.isEmpty()) {
+                                Surface(
+                                    color = Color.Yellow.copy(alpha = 0.2f),
+                                    shape = RoundedCornerShape(12.dp),
+                                    modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
+                                ) {
+                                    Text(
+                                        text = "⚠️ Cargue Procedimiento en el Catálogo del Presupuesto",
+                                        modifier = Modifier.padding(12.dp),
+                                        fontSize = 12.sp,
+                                        color = Color(0xFF856404),
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                }
+                            }
+
+                            ExposedDropdownMenuBox(
+                                expanded = expandedServicios,
+                                onExpandedChange = { expandedServicios = !expandedServicios }
+                            ) {
+                                OutlinedTextField(
+                                    value = servicioSeleccionado,
+                                    onValueChange = {},
+                                    readOnly = true,
+                                    placeholder = { Text("Seleccione un procedimiento...") },
+                                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedServicios) },
+                                    modifier = Modifier.fillMaxWidth().menuAnchor(
+                                        type = ExposedDropdownMenuAnchorType.PrimaryNotEditable,
+                                        enabled = true
+                                    ),
+                                    shape = RoundedCornerShape(16.dp),
+                                    colors = OutlinedTextFieldDefaults.colors(
+                                        focusedContainerColor = colorFondo,
+                                        unfocusedContainerColor = colorFondo
+                                    )
+                                )
+                                ExposedDropdownMenu(
+                                    expanded = expandedServicios,
+                                    onDismissRequest = { expandedServicios = false }
+                                ) {
+                                    catalogoServicios.forEach { servicio ->
+                                        DropdownMenuItem(
+                                            text = { Text(servicio.nombreServicio) },
+                                            onClick = {
+                                                servicioSeleccionado = servicio.nombreServicio
+                                                expandedServicios = false
+                                            }
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        // --- COMENTARIOS ---
+                        OutlinedTextField(
+                            value = comentarios,
+                            onValueChange = { comentarios = it },
+                            label = { Text("Comentarios / Observaciones") },
+                            modifier = Modifier.fillMaxWidth().height(90.dp),
+                            shape = RoundedCornerShape(16.dp),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedContainerColor = colorFondo,
+                                unfocusedContainerColor = colorFondo
+                            )
+                        )
+
+                        // --- BOTÓN GUARDAR ---
+                        Button(
+                            onClick = {
+                                val cita = Cita(
+                                    pacienteId = pacienteSeleccionado!!.id,
+                                    pacienteNombre = pacienteSeleccionado!!.nombre,
+                                    fechaHora = fechaSeleccionada,
+                                    observaciones = comentarios,
+                                    procedimiento = servicioSeleccionado
+                                )
+                                citaViewModel.insertarCita(cita)
+                                programarNotificacion(cita, context, dateTimeFormatter)
+                                navController.popBackStack()
+                            },
+                            modifier = Modifier.fillMaxWidth().height(56.dp),
+                            shape = RoundedCornerShape(16.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = colorAzulBotones),
+                            enabled = servicioSeleccionado.isNotEmpty()
+                        ) {
+                            Icon(Icons.Default.CheckCircle, contentDescription = null, modifier = Modifier.size(20.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Confirmar y Guardar", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                        }
                     }
                 }
-            },
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 16.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = colorAzulBotones // Usamos el color #094293
-            )
+            }
+        }
+    }
+}
+// --- COMPONENTES AUXILIARES ---
+
+@Composable
+fun BotonSeleccionRapida(label: String, valor: String, icono: androidx.compose.ui.graphics.vector.ImageVector, color: Color, modifier: Modifier, onClick: () -> Unit) {
+    Surface(
+        onClick = onClick,
+        modifier = modifier.height(70.dp),
+        shape = RoundedCornerShape(16.dp),
+        color = Color.White,
+        shadowElevation = 4.dp
+    ) {
+        Row(
+            modifier = Modifier.padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("Guardar Cita", color = Color.White)
+            Icon(icono, contentDescription = null, tint = color, modifier = Modifier.size(24.dp))
+            Spacer(modifier = Modifier.width(8.dp))
+            Column {
+                Text(label, fontSize = 12.sp, color = Color.Gray)
+                Text(valor, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+            }
         }
     }
 }
 
-// Función para programar una notificación
-// Función para programar una notificación
+@Composable
+fun ItemSeleccionPaciente(
+    paciente: Paciente,
+    estaSeleccionado: Boolean,
+    colorAzul: Color,
+    onSelect: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 6.dp, vertical = 4.dp)
+            .shadow(
+                elevation = 4.dp,
+                shape = RoundedCornerShape(16.dp)
+            )
+            // Usamos un clickable totalmente limpio sin efectos visuales
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null
+            ) {
+                onSelect()
+            },
+        shape = RoundedCornerShape(16.dp),
+        // Mantenemos el fondo siempre blanco para evitar el "remarcado"
+        colors = CardDefaults.cardColors(containerColor = Color.White)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // --- AVATAR ---
+            Box(
+                modifier = Modifier
+                    .size(45.dp)
+                    .clip(CircleShape)
+                    .background(colorAzul.copy(alpha = 0.1f)),
+                contentAlignment = Alignment.Center
+            ) {
+                if (!paciente.fotoPerfil.isNullOrEmpty()) {
+                    AsyncImage(
+                        model = File(paciente.fotoPerfil!!),
+                        contentDescription = null,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                } else {
+                    Icon(
+                        imageVector = Icons.Default.Person,
+                        contentDescription = null,
+                        tint = colorAzul
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.width(12.dp))
+
+            Text(
+                text = paciente.nombre,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.weight(1f),
+                color = Color(0xFF333333) // Un gris muy oscuro para elegancia
+            )
+
+            // --- EL BOTÓN (ÚNICO INDICADOR) ---
+            RadioButton(
+                selected = estaSeleccionado,
+                onClick = null, // null aquí porque el clic lo maneja la tarjeta completa
+                colors = RadioButtonDefaults.colors(
+                    selectedColor = colorAzul,
+                    unselectedColor = Color.LightGray
+                )
+            )
+        }
+    }
+}
 private fun programarNotificacion(cita: Cita, context: Context, formatter: DateTimeFormatter) {
     val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
@@ -321,20 +419,22 @@ private fun programarNotificacion(cita: Cita, context: Context, formatter: DateT
     )
     notificationManager.createNotificationChannel(channel)
 
-    // Calcular el tiempo hasta la cita
-    val tiempoHastaCita = cita.fechaHora.toEpochSecond(java.time.ZoneOffset.UTC) - LocalDateTime.now().toEpochSecond(java.time.ZoneOffset.UTC)
+    // Calcular el tiempo hasta la cita (en segundos)
+    val tiempoHastaCita = cita.fechaHora.toEpochSecond(java.time.ZoneOffset.UTC) -
+            LocalDateTime.now().toEpochSecond(java.time.ZoneOffset.UTC)
 
-    // Crear la solicitud de trabajo
-    val workRequest = OneTimeWorkRequestBuilder<NotificacionWorker>()
-        .setInitialDelay(tiempoHastaCita, TimeUnit.SECONDS)
-        .setInputData(
-            workDataOf(
-                "titulo" to "Recordatorio de Cita",
-                "mensaje" to "Tienes una cita programada para ${cita.fechaHora.format(formatter)}" // Usar el formateador pasado como parámetro
+    // Solo programar si la cita es en el futuro
+    if (tiempoHastaCita > 0) {
+        val workRequest = OneTimeWorkRequestBuilder<NotificacionWorker>()
+            .setInitialDelay(tiempoHastaCita, TimeUnit.SECONDS)
+            .setInputData(
+                workDataOf(
+                    "titulo" to "Recordatorio de Cita",
+                    "mensaje" to "Cita con ${cita.pacienteNombre} el ${cita.fechaHora.format(formatter)}"
+                )
             )
-        )
-        .build()
+            .build()
 
-    // Programar la notificación
-    WorkManager.getInstance(context).enqueue(workRequest)
+        WorkManager.getInstance(context).enqueue(workRequest)
+    }
 }

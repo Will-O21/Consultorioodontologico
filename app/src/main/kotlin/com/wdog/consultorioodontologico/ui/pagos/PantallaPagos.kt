@@ -4,309 +4,221 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Payments
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
-import androidx.navigation.NavController
+import coil.compose.AsyncImage
 import com.wdog.consultorioodontologico.entities.Paciente
+import com.wdog.consultorioodontologico.ui.components.EstadoVacioConsultorio
 import com.wdog.consultorioodontologico.viewmodels.PacienteViewModel
+import java.io.File
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PantallaPagos(
     pacientes: List<Paciente>,
-    navController: NavController,
     viewModel: PacienteViewModel
 ) {
-    val colorAzul = Color(0xFF094293) // Definimos el color #094293
-    val colorVerde = Color(0xFF155e29) // Color verde para "Al día" y "Completo"
-    val colorRojo = Color(0xFFa51b0b) // Color rojo para "Pendiente"
-    val colorFondoCard = colorAzul.copy(alpha = 0.1f)
+    var busqueda by remember { mutableStateOf("") }
+    val colorAzulOscuro = Color(0xFF101084)
+    val colorAzulBotones = Color(0xFF094293)
+    val colorVerde = Color(0xFF155E29)
+    val colorRojo = Color(0xFFAD1D1D)
+    val colorFondo = Color(0xFFF8F9FA)
 
-    Column(
-        modifier = Modifier.fillMaxSize()
-    ) {
-        // Barra de título superior
-        TopAppBar(
-            title = {
-                Box(
-                    modifier = Modifier.fillMaxWidth(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "Pagos",
-                        textAlign = TextAlign.Center,
-                        color = Color.White,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-            },
-            colors = TopAppBarDefaults.topAppBarColors(
-                containerColor = Color(0xFF101084) // Color de fondo azul #101084
-            )
-        )
+    val prioridadPago = mapOf(
+        "Pendiente" to 1,
+        "Abonó" to 2,
+        "Al día" to 3,
+        "Completo" to 3 // Agregamos Completo por si acaso se usa esa string
+    )
 
-        // Lista de pacientes con pagos (organizada por estado)
-        if (pacientes.isEmpty()) {
-            Text("No hay pacientes registrados", modifier = Modifier.padding(8.dp))
-        } else {
-            LazyColumn(
+// 2. Aplicamos el filtrado y el nuevo ordenamiento
+    val pacientesFiltrados = pacientes.filter {
+        it.nombre.contains(busqueda, ignoreCase = true)
+    }.sortedWith(compareBy({ prioridadPago[it.estadoPago] ?: 4 }, { it.nombre }))
+
+    Scaffold(
+        topBar = {
+            Column(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .padding(16.dp)
-                    .weight(1f) // Para que el LazyColumn ocupe el espacio restante
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(bottomStart = 32.dp, bottomEnd = 32.dp))
+                    .background(colorAzulOscuro)
+                    .padding(top = 48.dp, bottom = 24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                items(pacientes.sortedBy { it.estadoPago }) { paciente ->
-                    var estadoPago by remember { mutableStateOf(paciente.estadoPago) }
-                    var monto by remember { mutableStateOf(paciente.monto.toInt().toString()) }
-                    var abono by remember { mutableStateOf(paciente.abono.toInt().toString()) }
-                    var isEditing by remember { mutableStateOf(false) }
-                    val montoOriginal by remember { mutableIntStateOf(paciente.monto.toInt()) }
-                    var abonoOriginal by remember { mutableIntStateOf(paciente.abono.toInt()) }
-
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(8.dp),
-                        colors = CardDefaults.cardColors(
-                            containerColor = colorFondoCard
-                        )
-                    ) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Text(
-                                text = "${paciente.nombre} ${paciente.apellido}",
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 18.sp
-                            )
-
-                            when (estadoPago) {
-                                "Pendiente" -> {
-                                    Button(
-                                        onClick = { isEditing = true },
-                                        modifier = Modifier.fillMaxWidth(),
-                                        colors = ButtonDefaults.buttonColors(containerColor = colorRojo)
-                                    ) {
-                                        Text("Pendiente")
-                                    }
-                                }
-                                "Abonó" -> {
-                                    Text("Debe: ${montoOriginal - abonoOriginal}")
-                                    Button(
-                                        onClick = { isEditing = true },
-                                        modifier = Modifier.fillMaxWidth(),
-                                        colors = ButtonDefaults.buttonColors(containerColor = Color.Blue)
-                                    ) {
-                                        Text("Abonó")
-                                    }
-                                }
-                                "Completo" -> {
-                                    Button(
-                                        onClick = { /* No hace nada */ },
-                                        modifier = Modifier.fillMaxWidth(),
-                                        colors = ButtonDefaults.buttonColors(containerColor = colorVerde)
-                                    ) {
-                                        Text("Al día")
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    // Diálogo para editar el abono
-                    if (isEditing) {
-                        Dialog(
-                            onDismissRequest = { isEditing = false }
-                        ) {
-                            Card(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(16.dp),
-                                colors = CardDefaults.cardColors(
-                                    containerColor = Color.White
-                                )
-                            ) {
-                                Column(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(16.dp),
-                                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                                ) {
-                                    // Fila para Monto y su valor
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Text(
-                                            text = "Monto Total:",
-                                            fontWeight = FontWeight.Bold
-                                        )
-                                        Text(
-                                            text = monto,
-                                            fontWeight = FontWeight.Bold,
-                                            modifier = Modifier.padding(8.dp)
-                                        )
-                                    }
-
-                                    // Fila para Debe y su valor
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Text(
-                                            text = "Debe Actualmente:",
-                                            fontWeight = FontWeight.Bold
-                                        )
-                                        Text(
-                                            text = "${montoOriginal - abonoOriginal}",
-                                            fontWeight = FontWeight.Bold,
-                                            modifier = Modifier.padding(8.dp)
-                                        )
-                                    }
-
-                                    // Fila para Abono y su valor editable
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Text(
-                                            text = "Está Abonando:",
-                                            fontWeight = FontWeight.Bold
-                                        )
-                                        BasicTextField(
-                                            value = abono,
-                                            onValueChange = { abono = it },
-                                            modifier = Modifier
-                                                .weight(1f)
-                                                .padding(8.dp),
-                                            textStyle = LocalTextStyle.current.copy(
-                                                textAlign = TextAlign.End,
-                                                        fontWeight = FontWeight.Bold
-                                            )
-                                        )
-                                    }
-
-                                    // Fila para Restarían y su valor numérico
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Text(
-                                            text = "Restarían:",
-                                            fontWeight = FontWeight.Bold
-                                        )
-                                        // Valor de Restarían (calculado en tiempo real)
-                                        val restarian = remember(abono) {
-                                            val abonoActual = abono.toIntOrNull() ?: 0
-                                            (montoOriginal - abonoOriginal) - abonoActual
-                                        }
-                                        Text(
-                                            text = if (restarian >= 0) "$restarian" else "Corrige el Abono",
-                                            fontWeight = FontWeight.Bold,
-                                            modifier = Modifier.padding(8.dp),
-                                            color = if (restarian >= 0) Color.Unspecified else Color.Red // Cambia el color a rojo si es negativo
-                                        )
-                                    }
-
-                                    // Botones para guardar cambios
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                    ) {
-                                        Button(
-                                            onClick = {
-                                                val nuevoAbono = abono.toIntOrNull() ?: 0
-                                                if (nuevoAbono <= (montoOriginal - abonoOriginal)) {
-                                                    abonoOriginal += nuevoAbono
-                                                    estadoPago = if (montoOriginal - abonoOriginal == 0) {
-                                                        "Completo"
-                                                    } else {
-                                                        "Abonó"
-                                                    }
-                                                    val pacienteActualizado = paciente.copy(
-                                                        estadoPago = estadoPago,
-                                                        monto = montoOriginal.toDouble(),
-                                                        abono = abonoOriginal.toDouble()
-                                                    )
-                                                    viewModel.actualizarPaciente(pacienteActualizado)
-                                                    isEditing = false
-                                                }
-                                            },
-                                            modifier = Modifier.weight(1f),
-                                            colors = ButtonDefaults.buttonColors(containerColor = Color.Blue)
-                                        ) {
-                                            Text(
-                                                text = "Abonado",
-                                                modifier = Modifier.fillMaxWidth(),
-                                                textAlign = TextAlign.Center // Centrar el texto
-                                            )
-                                        }
-
-                                        Button(
-                                            onClick = {
-                                                estadoPago = "Completo"
-                                                abonoOriginal = montoOriginal
-                                                val pacienteActualizado = paciente.copy(
-                                                    estadoPago = estadoPago,
-                                                    monto = montoOriginal.toDouble(),
-                                                    abono = abonoOriginal.toDouble()
-                                                )
-                                                viewModel.actualizarPaciente(pacienteActualizado)
-                                                isEditing = false
-                                            },
-                                            modifier = Modifier.weight(1f),
-                                            colors = ButtonDefaults.buttonColors(containerColor = colorVerde)
-                                        ) {
-                                            Text("Completo")
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
+                Text(
+                    text = "Control de Pagos",
+                    color = Color.White,
+                    fontSize = 26.sp,
+                    fontWeight = FontWeight.Bold
+                )
             }
         }
-
-        // Botón "Atrás" en la esquina inferior derecha, debajo de la lista de pacientes
-        Box(
+    ) { paddingValues ->
+        Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(24.dp), // Aumentamos el padding para más distancia
-            contentAlignment = Alignment.BottomEnd
+                .fillMaxSize()
+                .background(colorFondo)
+                .padding(paddingValues)
+                .padding(horizontal = 16.dp)
         ) {
-            IconButton(
-                onClick = { navController.popBackStack() },
-                modifier = Modifier
-                    .size(56.dp)
-                    .background(colorAzul, shape = MaterialTheme.shapes.medium),
-                colors = IconButtonDefaults.iconButtonColors(
-                    contentColor = Color.White
+            Spacer(modifier = Modifier.height(16.dp))
+
+            OutlinedTextField(
+                value = busqueda,
+                onValueChange = { busqueda = it },
+                placeholder = { Text("Buscar paciente por nombre...") },
+                modifier = Modifier.fillMaxWidth().height(56.dp),
+                shape = RoundedCornerShape(28.dp),
+                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = colorAzulBotones) },
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedContainerColor = Color.White,
+                    unfocusedContainerColor = Color.White,
+                    focusedBorderColor = colorAzulBotones
+                ),
+                singleLine = true
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Ya no definimos pacientesFiltrados aquí, usamos la de arriba
+            if (pacientesFiltrados.isEmpty()) {
+                EstadoVacioConsultorio(
+                    icono = Icons.Default.Payments,
+                    mensaje = "Sin información de pagos",
+                    colorPersonalizado = Color.Gray
                 )
-            ) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = "Atrás"
-                )
+            } else {
+                LazyColumn(
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    contentPadding = PaddingValues(bottom = 16.dp)
+                ) {
+                    items(pacientesFiltrados) { paciente ->
+                        ItemPagoCard(
+                            paciente = paciente,
+                            viewModel = viewModel,
+                            colorAzul = colorAzulBotones,
+                            colorVerde = colorVerde,
+                            colorRojo = colorRojo,
+                            onActualizar = { pActualizado ->
+                                viewModel.actualizarPaciente(
+                                    paciente = pActualizado,
+                                    afecciones = emptyList(),
+                                    nuevaFotoPerfil = null,
+                                    nuevasPlacas = emptyList(),
+                                    borrarPerfilAnterior = false,
+                                    placasABorrar = emptyList()
+                                )
+                            }
+                        )
+                    }
+                }
             }
         }
+    }
+}
+
+@Composable
+fun ItemPagoCard(
+    paciente: Paciente,
+    viewModel: PacienteViewModel,
+    colorAzul: Color,
+    colorVerde: Color,
+    colorRojo: Color,
+    onActualizar: (Paciente) -> Unit
+) {
+    // 1. Eliminamos 'abonoInput' porque ya no se usa aquí.
+    var isEditing by remember { mutableStateOf(false) }
+
+    val montoOriginal = paciente.monto.toInt()
+    val abonoActual = paciente.abono.toInt()
+    val deuda = montoOriginal - abonoActual
+
+    ElevatedCard(
+        modifier = Modifier
+            .fillMaxWidth()
+            .shadow(4.dp, RoundedCornerShape(20.dp)),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.elevatedCardColors(containerColor = Color.White)
+    ) {
+        Row(
+            modifier = Modifier.padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // --- AVATAR ---
+            Box(
+                modifier = Modifier.size(50.dp).clip(CircleShape).background(colorAzul.copy(alpha = 0.1f)),
+                contentAlignment = Alignment.Center
+            ) {
+                if (!paciente.fotoPerfil.isNullOrEmpty()) {
+                    AsyncImage(
+                        model = File(paciente.fotoPerfil!!),
+                        contentDescription = null,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                } else {
+                    Icon(Icons.Default.Person, contentDescription = null, tint = colorAzul)
+                }
+            }
+
+            Spacer(modifier = Modifier.width(12.dp))
+
+            // --- INFORMACIÓN ---
+            Column(modifier = Modifier.weight(1f)) {
+                Text(text = paciente.nombre, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                if (paciente.estadoPago != "Completo" && paciente.estadoPago != "Al día") {
+                    Text(text = "Debe: $$deuda", fontSize = 12.sp, color = colorRojo)
+                } else {
+                    Text(text = "Pago total recibido", fontSize = 12.sp, color = colorVerde)
+                }
+            }
+
+            // --- BOTÓN DE ESTADO ---
+            val (btnColor, btnText) = when (paciente.estadoPago) {
+                "Pendiente" -> colorRojo to "Pendiente"
+                "Abonó" -> Color.Blue to "Abonó"
+                else -> colorVerde to "Al día"
+            }
+
+            Button(
+                onClick = { isEditing = true }, // 2. Solo activamos el estado
+                colors = ButtonDefaults.buttonColors(containerColor = btnColor),
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.height(36.dp),
+                contentPadding = PaddingValues(horizontal = 12.dp)
+            ) {
+                Text(btnText, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            }
+        }
+    }
+
+    // --- DIÁLOGO DE GESTIÓN RÁPIDA ---
+    if (isEditing) {
+        DialogEditarPago(
+            paciente = paciente,
+            viewModel = viewModel,
+            onDismiss = { isEditing = false },
+            onConfirm = { pacienteActualizado ->
+                onActualizar(pacienteActualizado)
+                isEditing = false
+            }
+        )
     }
 }
